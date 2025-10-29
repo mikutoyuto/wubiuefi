@@ -83,7 +83,7 @@ winboot2:
 	cat /usr/lib/grub/i386-pc/lnxboot.img build/grubutil/core.img > build/winboot/wubildr
 	mkdir -p build/winboot/EFI
 	grub-mkimage -O x86_64-efi -c build/winboot/wubildr-bootstrap.cfg -m build/winboot/wubildr.tar -o build/winboot/EFI/grubx64.efi \
-		loadenv part_msdos part_gpt fat ntfs ext2 ntfscomp iso9660 loopback search linux linuxefi boot minicmd cat cpuid chain halt help ls reboot \
+		loadenv part_msdos part_gpt fat ntfs ext2 ntfscomp iso9660 loopback search linux boot minicmd cat cpuid chain halt help ls reboot \
 		echo test configfile gzio normal sleep memdisk tar font gfxterm gettext true efi_gop efi_uga video_bochs video_cirrus probe efifwsetup \
 		all_video gfxterm_background png gfxmenu
 	cp /usr/lib/shim/shim.efi.signed build/winboot/EFI/shimx64.efi 2>/dev/null || \
@@ -94,7 +94,7 @@ winboot2:
 		cp /usr/lib/shim/mmx64.efi build/winboot/EFI/mmx64.efi
 	sbsign --key .key/*.key --cert .key/*.crt --output build/winboot/EFI/grubx64.efi build/winboot/EFI/grubx64.efi
 	grub-mkimage -O i386-efi -c build/winboot/wubildr-bootstrap.cfg -m build/winboot/wubildr.tar -o build/winboot/EFI/grubia32.efi \
-		loadenv part_msdos part_gpt fat ntfs ext2 ntfscomp iso9660 loopback search linux linuxefi boot minicmd cat cpuid chain halt help ls reboot \
+		loadenv part_msdos part_gpt fat ntfs ext2 ntfscomp iso9660 loopback search linux boot minicmd cat cpuid chain halt help ls reboot \
 		echo test configfile gzio normal sleep memdisk tar font gfxterm gettext true efi_gop efi_uga video_bochs video_cirrus probe efifwsetup \
 		all_video gfxterm_background png gfxmenu
 	sbsign --key .key/*.key --cert .key/*.crt --output build/winboot/EFI/grubia32.efi build/winboot/EFI/grubia32.efi
