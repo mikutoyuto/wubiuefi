@@ -880,24 +880,75 @@ class WindowsBackend(Backend):
         if not os.path.isfile(bcdedit):
             log.error("Cannot find bcdedit")
             return
-        id = registry.get_value(
+            
+        target_path_lower = r'\EFI\ubuntu\wubildr\shimx64.efi'.lower()
+        guids_to_delete = []
+        
+        # 1. レジストリに保存されているGUIDを取得 (従来の削除対象)
+        registry_id = registry.get_value(
             'HKEY_LOCAL_MACHINE',
             self.info.registry_key,
             'VistaBootDrive')
-        if not id:
-            log.debug("Could not find bcd id")
-            return
-        log.debug("Removing bcd entry %s" % id)
-        command = [bcdedit, '/delete', id , '/f']
+        if registry_id:
+            log.debug("Found BCD ID in registry: %s" % registry_id)
+            guids_to_delete.append(registry_id)
+            
+        # 2. すべてのファームウェアエントリを列挙し、パスが一致するものを探す
         try:
-            run_command(command)
-            registry.set_value(
-                'HKEY_LOCAL_MACHINE',
-                self.info.registry_key,
-                'VistaBootDrive',
-                "")
-        except Exception, err: #this shouldn't be fatal
-            log.error(err)
+            log.debug("Enumerating all firmware entries to find matching paths...")
+            enum_command = [bcdedit, '/enum', 'firmware', '/v']
+            output = run_command(enum_command)
+            
+            current_id = None
+            current_path = None
+            
+            for line in output.splitlines():
+                line = line.strip()
+                if line.startswith('identifier'):
+                    # 新しいエントリの開始
+                    try:
+                        current_id = line.split()[-1]
+                        current_path = None # パスをリセット
+                    except IndexError:
+                        current_id = None
+                elif line.startswith('path') and current_id:
+                    # パスの行を見つけた
+                    try:
+                        current_path = line.split(None, 1)[-1]
+                        # パスが目的のものと一致するか確認 (大文字小文字無視)
+                        if current_path and current_path.lower() == target_path_lower:
+                            log.debug("Found matching firmware entry: ID=%s, Path=%s" % (current_id, current_path))
+                            if current_id not in guids_to_delete:
+                                guids_to_delete.append(current_id)
+                    except IndexError:
+                        current_path = None
+                        
+        except Exception, err:
+            log.error("Error enumerating firmware entries: %s" % err)
+            # エラーが発生しても、レジストリのID削除は試みる
+        
+        # 3. 見つかったすべてのGUIDを削除
+        if not guids_to_delete:
+            log.debug("No BCD entries found to delete for Wubi.")
+            return
+
+        log.debug("Attempting to delete BCD entries: %s" % ", ".join(guids_to_delete))
+        for id_to_delete in guids_to_delete:
+            log.debug("Removing bcd entry %s" % id_to_delete)
+            command = [bcdedit, '/delete', id_to_delete , '/f']
+            try:
+                run_command(command)
+                # レジストリの値も削除 (複数エントリがあってもレジストリは一つなので問題ない)
+                if id_to_delete == registry_id:
+                     registry.set_value(
+                         'HKEY_LOCAL_MACHINE',
+                         self.info.registry_key,
+                         'VistaBootDrive',
+                         "")
+            except Exception, err: # 削除失敗は致命的ではない場合がある
+                log.error("Failed to delete BCD entry %s: %s" % (id_to_delete, err))
+        
+        
 
     def get_arch(self):
         cpuid = ctypes.windll.LoadLibrary(self.info.cpuid)
