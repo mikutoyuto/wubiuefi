@@ -1,6 +1,7 @@
+---
 name: Release wubi.exe
 
-on:
+"on":
   push:
     tags:
       - 'v*'
@@ -12,11 +13,11 @@ permissions:
 jobs:
   build-and-release:
     runs-on: ubuntu-22.04
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Install build dependencies
         run: |
           sudo dpkg --add-architecture i386
@@ -36,73 +37,84 @@ jobs:
             wget \
             gettext \
             make
-      
+
       - name: Setup Wine prefix
         run: |
           export WINEPREFIX="$PWD/wine"
           wineboot --init
           # Wait for wine to initialize
           sleep 5
-      
+
       - name: Download and install Python 2.7 in Wine
         run: |
           export WINEPREFIX="$PWD/wine"
-          wget -O /tmp/python.msi https://www.python.org/ftp/python/2.7.17/python-2.7.17.msi
-          wine msiexec /i /tmp/python.msi /qb /ADDLOCAL=DefaultFeature /ALLUSERS=1
+          wget -O /tmp/python.msi \
+            https://www.python.org/ftp/python/2.7.17/python-2.7.17.msi
+          wine msiexec /i /tmp/python.msi /qb \
+            /ADDLOCAL=DefaultFeature /ALLUSERS=1
           # Wait for installation to complete
           sleep 10
-      
+
       - name: Download and install PyCrypto in Wine
         run: |
           export WINEPREFIX="$PWD/wine"
-          wget -O /tmp/pycrypto.exe https://web.archive.org/web/20200502114359/http://www.voidspace.org.uk/downloads/pycrypto26/pycrypto-2.6.win32-py2.7.exe
+          wget -O /tmp/pycrypto.exe \
+            https://web.archive.org/web/20200502114359/http://www.voidspace.org.uk/downloads/pycrypto26/pycrypto-2.6.win32-py2.7.exe
           wine /tmp/pycrypto.exe /S
           sleep 5
-      
+
       - name: Download and install mock module
         run: |
           export WINEPREFIX="$PWD/wine"
-          wget -O /tmp/mock.zip https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/mock/mock-0.3.1.zip
+          wget -O /tmp/mock.zip \
+            https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/mock/mock-0.3.1.zip
           unzip /tmp/mock.zip -d /tmp
-          cp /tmp/mock-0.3.1/mock.py wine/drive_c/Python27/Lib/site-packages/
-      
+          cp /tmp/mock-0.3.1/mock.py \
+            wine/drive_c/Python27/Lib/site-packages/
+
       - name: Download and install 7-Zip
         run: |
           export WINEPREFIX="$PWD/wine"
-          wget -O /tmp/7z.exe https://downloads.sourceforge.net/project/sevenzip/7-Zip/4.64/7z464.exe
+          wget -O /tmp/7z.exe \
+            https://downloads.sourceforge.net/project/sevenzip/7-Zip/4.64/7z464.exe
           wine /tmp/7z.exe /S
           sleep 5
-      
+
       - name: Generate Secure Boot key
         run: |
           mkdir .key
-          openssl req -new -x509 -newkey rsa:2048 -keyout .key/github_wubi.key \
-            -out .key/github_wubi.crt -nodes -days 3650 -subj "/CN=GitHub Actions Wubi/"
-          openssl x509 -in .key/github_wubi.crt -out .key/github_wubi.cer -outform DER
-      
+          openssl req -new -x509 -newkey rsa:2048 \
+            -keyout .key/github_wubi.key \
+            -out .key/github_wubi.crt -nodes -days 3650 \
+            -subj "/CN=GitHub Actions Wubi/"
+          openssl x509 -in .key/github_wubi.crt \
+            -out .key/github_wubi.cer -outform DER
+
       - name: Build wubi.exe
         run: |
           export WINEPREFIX="$PWD/wine"
           make
-      
+
       - name: Get version from debian/changelog
         id: get_version
         run: |
-          VERSION=$(head -n 1 debian/changelog | sed -e "s/^wubi (\(.*\)).*/\1/g")
+          VERSION=$(head -n 1 debian/changelog | \
+            sed -e "s/^wubi (\(.*\)).*/\1/g")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
-      
+
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
           name: Release ${{ steps.get_version.outputs.version }}
           body: |
-            Automatic release of wubi.exe version ${{ steps.get_version.outputs.version }}
-            
+            Automatic release of wubi.exe version
+            ${{ steps.get_version.outputs.version }}
+
             ## Installation
             Download `wubi.exe` and run it on Windows.
-            
+
             ## Changes
             See debian/changelog for details.
           files: |

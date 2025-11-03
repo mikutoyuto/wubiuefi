@@ -60,6 +60,27 @@ Wubi performs the following tasks:
 * Replace the generated dummy keys in `.key` with your signing keys for Secure Boot
 * On the Linux side, the distribution must be capable of booting and rebooting off a loop file, perform an automatic installation and accept the special boot parameters that indicate the local preseed file and ISO image to boot from.
 
+## Automated Releases
+
+This repository includes a GitHub Actions workflow that automatically builds and releases wubi.exe when a new tag is pushed.
+
+### Creating a Release
+
+To create a new release:
+
+1. Update the version in `debian/changelog` if needed
+2. Create and push a tag:
+   ```bash
+   git tag v22.04.4r346  # or rXXX format
+   git push origin v22.04.4r346
+   ```
+3. The GitHub Actions workflow will automatically:
+   - Build wubi.exe with all dependencies
+   - Create a GitHub release with the version from debian/changelog
+   - Upload wubi.exe as a release asset
+
+The workflow supports tags starting with `v` (e.g., `v22.04.4r346`) or `r` (e.g., `r346`).
+
 ## License
 
 GPL v2. See [LICENSE](./LICENSE)
