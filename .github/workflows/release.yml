@@ -109,8 +109,7 @@ jobs:
         with:
           name: Release ${{ steps.get_version.outputs.version }}
           body: |
-            Automatic release of wubi.exe version
-            ${{ steps.get_version.outputs.version }}
+            Automatic release of wubi.exe version ${{ steps.get_version.outputs.version }}
 
             ## Installation
             Download `wubi.exe` and run it on Windows.
